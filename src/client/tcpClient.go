@@ -24,7 +24,7 @@ type TcpClient struct {
 	HawkServer		*net.TCPAddr
 }
 
-func run(fileSyncer *base.FileSync) (*TcpFileSync,error) {
+func Run(fileSyncer *base.FileSync) (*TcpFileSync,error) {
 
 	tcpAddr ,err := net.ResolveTCPAddr("tcp", fileSyncer.ServerAddr)
 
@@ -52,8 +52,25 @@ func run(fileSyncer *base.FileSync) (*TcpFileSync,error) {
 	// 完成创建之后，启动单独的协程处理来自服务端的数据处理
 	go tcpFileSync.dataReader()
 
+	// 心跳
+	go tcpFileSync.Heart()
+
 	return tcpFileSync,nil
 }
+
+func (tcpFileSyncer *TcpFileSync) HangTcpClient() {
+	// loop forever
+	for {
+		select {
+		case <-tcpFileSyncer.FileSyncer.StopChan:
+			fmt.Println("receive stop signal,return main func!")
+			return
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+}
+
 
 func (tcpFileSyncer *TcpFileSync) dataReader() {
 	defer tcpFileSyncer.Connection.Close()
