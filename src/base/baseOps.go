@@ -22,6 +22,7 @@ type FileSync struct {
 	ServerAddr 	string
 	HeartTime	chan int64
 	StopChan	chan struct{}
+	IsSync     bool
 
 	Sender
 }

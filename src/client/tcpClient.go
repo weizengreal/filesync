@@ -13,7 +13,6 @@ import (
 
 type TcpFileSync struct {
 	FileSyncer *base.FileSync
-	IsSync     bool
 	TcpClient
 	tcp.PkgHandle
 }
@@ -49,6 +48,8 @@ func Run(fileSyncer *base.FileSync) (*TcpFileSync,error) {
 		FileSyncer: fileSyncer,
 	}
 
+	tcpFileSync.PkgHandle.Dispatch = tcpFileSync.Dispatch
+
 	// 完成创建之后，启动单独的协程处理来自服务端的数据处理
 	go tcpFileSync.dataReader()
 
@@ -58,11 +59,11 @@ func Run(fileSyncer *base.FileSync) (*TcpFileSync,error) {
 	return tcpFileSync,nil
 }
 
-func (tcpFileSyncer *TcpFileSync) HangTcpClient() {
+func (tcpFileSync *TcpFileSync) HangTcpClient() {
 	// loop forever
 	for {
 		select {
-		case <-tcpFileSyncer.FileSyncer.StopChan:
+		case <-tcpFileSync.FileSyncer.StopChan:
 			fmt.Println("receive stop signal,return main func!")
 			return
 		}
@@ -72,15 +73,15 @@ func (tcpFileSyncer *TcpFileSync) HangTcpClient() {
 }
 
 
-func (tcpFileSyncer *TcpFileSync) dataReader() {
-	defer tcpFileSyncer.Connection.Close()
-	bufferReader := bufio.NewReader(tcpFileSyncer.Connection)
-	tcpFileSyncer.Unpack(bufferReader)
+func (tcpFileSync *TcpFileSync) dataReader() {
+	defer tcpFileSync.Connection.Close()
+	bufferReader := bufio.NewReader(tcpFileSync.Connection)
+	tcpFileSync.Unpack(bufferReader)
 }
 
 
 // 发送数据包底层原型
-func (tcpFileSyncer *TcpFileSync) sender(pkgType byte,pkgContent []byte) error  {
+func (tcpFileSync *TcpFileSync) sender(pkgType byte,pkgContent []byte) error  {
 
 	packet := &tcp.Packet{
 		PacketType:pkgType,
@@ -94,7 +95,7 @@ func (tcpFileSyncer *TcpFileSync) sender(pkgType byte,pkgContent []byte) error  
 		return err
 	}
 	
-	_,err = tcpFileSyncer.TcpClient.Connection.Write(tcpFileSyncer.Packaged(pkgData))
+	_,err = tcpFileSync.TcpClient.Connection.Write(tcpFileSync.Packaged(pkgData))
 
 	return err
 }
@@ -138,17 +139,18 @@ func (tcpConsumer *TcpFileSync) SendMessage(message string) error  {
 
 
 /**
+	TODO:: tcp 改造为队列读取，可以在繁忙时省下一个心跳包的消耗
 	发送心跳数据包
 */
-func (tcpFileSyncer *TcpFileSync)Heart()  {
+func (tcpFileSync *TcpFileSync)Heart()  {
 	for {
-		tcpFileSyncer.SendHeart()
+		tcpFileSync.SendHeart()
 		time.Sleep(time.Second * 5)
 	}
 }
 
 
-func (tcpFileSyncer *TcpFileSync)Dispatch(recvBuffer []byte) {
+func (tcpFileSync *TcpFileSync)Dispatch(recvBuffer []byte) {
 	var packet tcp.Packet
 	if json.Unmarshal(recvBuffer,&packet) != nil {
 		fmt.Println("unmarshal err")
@@ -160,16 +162,16 @@ func (tcpFileSyncer *TcpFileSync)Dispatch(recvBuffer []byte) {
 			fmt.Println("client:json unmarshal error during HEART_BEAT_PACKET!")
 			return
 		}
-		lastHeart := <-tcpFileSyncer.FileSyncer.HeartTime
+		lastHeart := <-tcpFileSync.FileSyncer.HeartTime
 		now := time.Now().Unix()
 		if heartPacket.Timestamp > lastHeart && now - heartPacket.Timestamp > 10 {
 			fmt.Printf("false: now [%d]  last [%d] \n",now,lastHeart)
-			tcpFileSyncer.IsSync = false
+			tcpFileSync.FileSyncer.IsSync = false
 		} else {
 			fmt.Println("true")
-			tcpFileSyncer.IsSync = true
+			tcpFileSync.FileSyncer.IsSync = true
 		}
-		tcpFileSyncer.FileSyncer.HeartTime <- now
+		tcpFileSync.FileSyncer.HeartTime <- heartPacket.Timestamp
 		break
 	case base.MESSAGE_PACKET:
 		// 普通消息暂时不做处理

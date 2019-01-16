@@ -37,8 +37,6 @@ func Run(fileSyncer *base.FileSync) {
 		return
 	}
 
-	fmt.Println("waiting clients...")
-
 	defer listener.Close()
 
 	tcpServer := TcpServer{
@@ -46,6 +44,7 @@ func Run(fileSyncer *base.FileSync) {
 		hawkServer:hawkServer,
 	}
 
+	fmt.Printf("tcp server has started!serverAddr: %s ,waiting clients...\n",fileSyncer.ServerAddr)
 	for {
 		conn , err := listener.Accept()
 		if err != nil {
@@ -58,6 +57,8 @@ func Run(fileSyncer *base.FileSync) {
 			FileSyncer: fileSyncer,
 			conn: conn,
 		}
+
+		tcpFileSync.PkgHandle.Dispatch = tcpFileSync.Dispatch
 
 		// 服务端与客户端成功建立连接之后，启动新协程单独处理 Tcp 数据通信
 		go tcpFileSync.dataReader()
@@ -84,12 +85,19 @@ func (tcpFileSync *TcpFileSync)Dispatch(recvBuffer []byte) {
 			fmt.Println("json unmarshal error during HEART_BEAT_PACKET!")
 			return
 		}
-		//var retData *apires.JsonResult
-		fmt.Println("heart check found this connection has timeout!")
+		lastHeart := <-tcpFileSync.FileSyncer.HeartTime
+		now := time.Now().Unix()
+		if heartPacket.Timestamp > lastHeart && now - heartPacket.Timestamp > 10 {
+			fmt.Printf("false: now [%d]  last [%d] \n",now,lastHeart)
+			tcpFileSync.FileSyncer.IsSync = false
+		} else {
+			fmt.Println("true")
+			tcpFileSync.FileSyncer.IsSync = true
+		}
+		tcpFileSync.FileSyncer.HeartTime <- heartPacket.Timestamp
 
 		// 返回一个全新的心跳包，让客户端处理即可
 		heartPacket.Timestamp = time.Now().Unix()
-
 		retBytes ,err := json.Marshal(heartPacket)
 		checkErr(err)
 

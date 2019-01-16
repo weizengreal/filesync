@@ -15,14 +15,13 @@ type pkgData interface {
 	Packaged(sendBytes []byte) []byte
 
 	Unpack(bufferReader *bufio.Reader)
-
-	Dispatch(recvBuffer []byte)
 }
 
 /**
 	定义数据包的操作结构体，供外部实例调用
  */
 type PkgHandle struct {
+	Dispatch func(recvBuffer []byte)
 	pkgData
 }
 
