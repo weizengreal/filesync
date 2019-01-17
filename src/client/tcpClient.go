@@ -23,7 +23,7 @@ type TcpClient struct {
 	HawkServer *net.TCPAddr
 }
 
-func Run(fileSyncer *base.FileSync) (*TcpFileSync, error) {
+func RunTcp(fileSyncer *base.FileSync) (*TcpFileSync, error) {
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", fileSyncer.ServerAddr)
 

@@ -23,7 +23,7 @@ type TcpServer struct {
 	hawkServer *net.TCPAddr
 }
 
-func Run(fileSyncer *base.FileSync) {
+func RunTcp(fileSyncer *base.FileSync) {
 	hawkServer, err := net.ResolveTCPAddr("tcp", fileSyncer.ServerAddr)
 	if err != nil {
 		fmt.Printf("hawk server[%s] resolve error [%s] \n", fileSyncer.ServerAddr, err.Error())
