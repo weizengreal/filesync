@@ -13,7 +13,7 @@ import (
 */
 func main() {
 
-	serverAddr := flag.String("serverAddr", "127.0.0.1:11197", "the path of server address!")
+	serverAddr := flag.String("serverAddr", "0.0.0.0:11197", "the path of server address!")
 	appType := flag.Int("appType", 2, "application type,1 means server,2 means client!")
 	flag.Parse()
 
@@ -26,6 +26,7 @@ func main() {
 
 	if *appType == 1 {
 		// 启动服务端
+		fileSyncer.ServerAddr = "0.0.0.0:11197"
 		server.Run(fileSyncer)
 	} else if *appType == 2 {
 		// 启动客户端

@@ -68,6 +68,7 @@ func (tcpFileSync *TcpFileSync) HangTcpClient() {
 			return
 		}
 
+		// 先放这儿
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -76,6 +77,8 @@ func (tcpFileSync *TcpFileSync) dataReader() {
 	defer tcpFileSync.Connection.Close()
 	bufferReader := bufio.NewReader(tcpFileSync.Connection)
 	tcpFileSync.Unpack(bufferReader)
+	tcpFileSync.FileSyncer.StopChan <- struct{}{}
+	fmt.Println("client finished!push to stop chan!")
 }
 
 // 发送数据包底层原型
@@ -99,7 +102,7 @@ func (tcpFileSync *TcpFileSync) sender(pkgType byte, pkgContent []byte) error {
 }
 
 // 发送一个心跳包
-func (tcpConsumer *TcpFileSync) SendHeart() ([]byte, error) {
+func (tcpConsumer *TcpFileSync) SendHeart() error {
 
 	heartPacket := &tcp.HeartPacket{
 		Version:   "1.0",
@@ -110,10 +113,10 @@ func (tcpConsumer *TcpFileSync) SendHeart() ([]byte, error) {
 
 	if err != nil {
 		fmt.Println("json marshal err")
-		return nil, err
+		return err
 	}
 
-	return nil, tcpConsumer.sender(base.HEART_BEAT_PACKET, heartPacketJson)
+	return tcpConsumer.sender(base.HEART_BEAT_PACKET, heartPacketJson)
 }
 
 // 发送一个日志消息数据包
@@ -164,7 +167,6 @@ func (tcpFileSync *TcpFileSync) Dispatch(recvBuffer []byte) {
 			fmt.Printf("false: now [%d]  last [%d] \n", now, lastHeart)
 			tcpFileSync.FileSyncer.IsSync = false
 		} else {
-			fmt.Println("true")
 			tcpFileSync.FileSyncer.IsSync = true
 		}
 		tcpFileSync.FileSyncer.HeartTime <- heartPacket.Timestamp

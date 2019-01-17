@@ -58,6 +58,7 @@ func Run(fileSyncer *base.FileSync) {
 		}
 
 		tcpFileSync.PkgHandle.Dispatch = tcpFileSync.Dispatch
+		fmt.Println(conn.RemoteAddr())
 
 		// 服务端与客户端成功建立连接之后，启动新协程单独处理 Tcp 数据通信
 		go tcpFileSync.dataReader()
