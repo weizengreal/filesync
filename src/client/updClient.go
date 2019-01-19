@@ -21,6 +21,8 @@ func RunUdp(fileSyncer *base.FileSync) {
 		os.Exit(1)
 	}
 
+	fmt.Println("localAddr:", conn.LocalAddr())
+
 	conn.Write([]byte("Hello world!"))
 
 	fmt.Println("send msg")

@@ -38,6 +38,8 @@ func RunTcp(fileSyncer *base.FileSync) (*TcpFileSync, error) {
 		return nil, err
 	}
 
+	fmt.Println("localAddr:", conn.LocalAddr())
+
 	client := TcpClient{
 		Connection: conn,
 		HawkServer: tcpAddr,
